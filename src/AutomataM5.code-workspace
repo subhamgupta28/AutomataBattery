@@ -1,0 +1,56 @@
+{
+	"folders": [
+		{
+			"path": "../../AutomataM5"
+		},
+		{
+			"name": "AutomataBattery",
+			"path": ".."
+		},
+		{
+			"path": "../../AutomataCapsule"
+		},
+		{
+			"path": "../../AutomataENV"
+		},
+		{
+			"path": "E:/Arduino Lib/ArduinoAutomata"
+		},
+		{
+			"name": "Fan",
+			"path": "../../Fan"
+		},
+		{
+			"name": "GPS",
+			"path": "../../GPS"
+		},
+		{
+			"name": "ESPC3_FAN",
+			"path": "../../ESPC3_FAN"
+		},
+		{
+			"name": "SeedC3",
+			"path": "../../SeedC3"
+		},
+		{
+			"name": "C3_Board",
+			"path": "../../C3_Board"
+		},
+		{
+			"name": "WeActS3",
+			"path": "../../WeActS3"
+		},
+		{
+			"name": "BeetleC6",
+			"path": "../../BeetleC6"
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"array": "cpp",
+			"string": "cpp",
+			"string_view": "cpp",
+			"ranges": "cpp"
+		}
+	}
+}

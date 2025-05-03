@@ -390,53 +390,53 @@ void readPower()
   if (percent < 0)
     percent = 0;
   previousMillis = currentMillis;
-  // Serial.print("C1:   ");
-  // Serial.println(c1_curr);
+  Serial.print("C1:   ");
+  Serial.println(c1_curr);
 
-  // Serial.print("V1:   ");
-  // Serial.println(c1_volt);
+  Serial.print("V1:   ");
+  Serial.println(c1_volt);
 
-  // Serial.print("P1:   ");
-  // Serial.println(c1_pow);
-  // Serial.print("C2:   ");
-  // Serial.println(c2_curr);
+  Serial.print("P1:   ");
+  Serial.println(c1_pow);
+  Serial.print("C2:   ");
+  Serial.println(c2_curr);
 
-  // Serial.print("V2:   ");
-  // Serial.println(c2_volt);
+  Serial.print("V2:   ");
+  Serial.println(c2_volt);
 
-  // Serial.print("P2:   ");
-  // Serial.println(c2_pow);
+  Serial.print("P2:   ");
+  Serial.println(c2_pow);
 
-  // Serial.print("Bus Voltage:   ");
-  // Serial.print(busvoltage);
-  // Serial.println(" V");
-  // Serial.print("Shunt Voltage: ");
-  // Serial.print(shuntvoltage);
-  // Serial.println(" mV");
-  // Serial.print("Load Voltage:  ");
-  // Serial.print(loadvoltage);
-  // Serial.println(" V");
-  // Serial.print("Current:       ");
-  // Serial.print(curr);
-  // Serial.println(" mA");
-  // Serial.print("Power:         ");
-  // Serial.print(power_mW);
-  // Serial.println(" mW");
-  // Serial.print("Energy:        ");
-  // Serial.print(totalEnergy);
-  // Serial.println(" mWh");
-  // Serial.print("Percent:       ");
-  // Serial.print(percent);
-  // Serial.println(" %");
-  // Serial.print("Capacity:      ");
-  // Serial.print(capacity_mAh);
-  // Serial.println(" mAh");
-  // Serial.print("Status:        ");
-  // Serial.println(isDischarge);
-  // Serial.print("Charging Time (hours): ");
-  // Serial.println(chargingTimeHours);
-  // Serial.print("Discharging Time (hours): ");
-  // Serial.println(dischargingTimeHours);
+  Serial.print("Bus Voltage:   ");
+  Serial.print(busvoltage);
+  Serial.println(" V");
+  Serial.print("Shunt Voltage: ");
+  Serial.print(shuntvoltage);
+  Serial.println(" mV");
+  Serial.print("Load Voltage:  ");
+  Serial.print(loadvoltage);
+  Serial.println(" V");
+  Serial.print("Current:       ");
+  Serial.print(curr);
+  Serial.println(" mA");
+  Serial.print("Power:         ");
+  Serial.print(power_mW);
+  Serial.println(" mW");
+  Serial.print("Energy:        ");
+  Serial.print(totalEnergy);
+  Serial.println(" mWh");
+  Serial.print("Percent:       ");
+  Serial.print(percent);
+  Serial.println(" %");
+  Serial.print("Capacity:      ");
+  Serial.print(capacity_mAh);
+  Serial.println(" mAh");
+  Serial.print("Status:        ");
+  Serial.println(isDischarge);
+  Serial.print("Charging Time (hours): ");
+  Serial.println(chargingTimeHours);
+  Serial.print("Discharging Time (hours): ");
+  Serial.println(dischargingTimeHours);
 }
 
 void listenUDP()

@@ -129,7 +129,7 @@ void action(const Action action)
 
   if (action.data.containsKey("outPow"))
   {
-    outPow = action.data["outPow"] == "true";
+    outPow = action.data["outPow"];
     preferences.putBool("outPow", outPow);
     if (outPow)
       softOn();

@@ -50,7 +50,14 @@
 			"array": "cpp",
 			"string": "cpp",
 			"string_view": "cpp",
-			"ranges": "cpp"
+			"ranges": "cpp",
+			"deque": "cpp",
+			"list": "cpp",
+			"unordered_map": "cpp",
+			"unordered_set": "cpp",
+			"vector": "cpp",
+			"initializer_list": "cpp",
+			"regex": "cpp"
 		}
 	}
 }

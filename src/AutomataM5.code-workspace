@@ -41,8 +41,8 @@
 			"path": "../../WeActS3"
 		},
 		{
-			"name": "BeetleC6",
-			"path": "../../BeetleC6"
+			"name": "KnobDisplay",
+			"path": "../../KnobDisplay"
 		}
 	],
 	"settings": {
@@ -57,7 +57,9 @@
 			"unordered_set": "cpp",
 			"vector": "cpp",
 			"initializer_list": "cpp",
-			"regex": "cpp"
+			"regex": "cpp",
+			"cjson.h": "c",
+			"freertos.h": "c"
 		}
 	}
 }

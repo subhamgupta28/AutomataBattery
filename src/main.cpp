@@ -13,6 +13,7 @@
 #define I2C_SCL_PIN 41
 #define PIN 45
 #define FAN 18
+#define BTN_PIN 4
 
 // const char* HOST = "192.168.29.67";
 // int PORT = 8080;
@@ -87,7 +88,7 @@ String uptime;
 long timestamp;
 float chargingTimeHours = 0;
 float dischargingTimeHours = 0;
-float targetCapacity = 30;
+float targetCapacity = 20;
 long startTime = 0;
 String startTimeStr = "";
 String isDischarge = "DISCHARGE";
@@ -211,6 +212,7 @@ void setup()
   led.show();
   pinMode(PIN, OUTPUT);
   pinMode(FAN, OUTPUT);
+  pinMode(BTN_PIN, INPUT_PULLUP);
   analogWrite(PIN, 20);
   analogWrite(FAN, fan);
 
@@ -232,10 +234,10 @@ void setup()
   automata.addAttribute("C1_POWER", "P1", "W", "DATA|AUX");
   automata.addAttribute("C2_POWER", "P2", "W", "DATA|AUX");
 
-  automata.addAttribute("C1", "V1", "V", "DATA|AUX");
-  automata.addAttribute("C2", "V2", "V", "DATA|AUX");
-  automata.addAttribute("C3", "V3", "V", "DATA|AUX");
-  automata.addAttribute("C4", "V4", "V", "DATA|AUX");
+  // automata.addAttribute("C1", "V1", "V", "DATA|AUX");
+  // automata.addAttribute("C2", "V2", "V", "DATA|AUX");
+  // automata.addAttribute("C3", "V3", "V", "DATA|AUX");
+  // automata.addAttribute("C4", "V4", "V", "DATA|AUX");
 
   // automata.addAttribute("shuntVoltage", "Shunt Volt", "V");
   automata.addAttribute("busVoltage", "Voltage", "V", "DATA|AUX");
@@ -256,7 +258,7 @@ void setup()
   automata.addAttribute("outPow", "Light", "", "ACTION|SWITCH");
   automata.addAttribute("toggle", "Toggle", "", "ACTION|MENU|BTN");
   automata.addAttribute("reset", "Reset", "", "ACTION|MENU|BTN");
-
+automata.addAttribute("button", "Button", "", "ACTION|MENU|BTN");
   automata.addAttribute("dischargingTime", "Time Left", "Hr", "DATA|MAIN");
   // automata.addAttribute("upTime", "Up Time", "Hours", "DATA|MAIN");
 
@@ -366,7 +368,7 @@ void readPower()
   totalEnergy += power_mW * (timeInterval / (60 * 60));
   capacity_mAh += current_mA * (timeInterval / (60 * 60));
   isDischarge = curr < 0 ? "DISCHARGING" : "CHARGING";
-  percent = mapf(busvoltage, 12.8, 16.8, 0.0, 100.0);
+  percent = mapf(busvoltage, 19.2, 25.2, 0.0, 100.0);
 
   if (isDischarge == "CHARGING")
   {
@@ -390,53 +392,6 @@ void readPower()
   if (percent < 0)
     percent = 0;
   previousMillis = currentMillis;
-  Serial.print("C1:   ");
-  Serial.println(c1_curr);
-
-  Serial.print("V1:   ");
-  Serial.println(c1_volt);
-
-  Serial.print("P1:   ");
-  Serial.println(c1_pow);
-  Serial.print("C2:   ");
-  Serial.println(c2_curr);
-
-  Serial.print("V2:   ");
-  Serial.println(c2_volt);
-
-  Serial.print("P2:   ");
-  Serial.println(c2_pow);
-
-  Serial.print("Bus Voltage:   ");
-  Serial.print(busvoltage);
-  Serial.println(" V");
-  Serial.print("Shunt Voltage: ");
-  Serial.print(shuntvoltage);
-  Serial.println(" mV");
-  Serial.print("Load Voltage:  ");
-  Serial.print(loadvoltage);
-  Serial.println(" V");
-  Serial.print("Current:       ");
-  Serial.print(curr);
-  Serial.println(" mA");
-  Serial.print("Power:         ");
-  Serial.print(power_mW);
-  Serial.println(" mW");
-  Serial.print("Energy:        ");
-  Serial.print(totalEnergy);
-  Serial.println(" mWh");
-  Serial.print("Percent:       ");
-  Serial.print(percent);
-  Serial.println(" %");
-  Serial.print("Capacity:      ");
-  Serial.print(capacity_mAh);
-  Serial.println(" mAh");
-  Serial.print("Status:        ");
-  Serial.println(isDischarge);
-  Serial.print("Charging Time (hours): ");
-  Serial.println(chargingTimeHours);
-  Serial.print("Discharging Time (hours): ");
-  Serial.println(dischargingTimeHours);
 }
 
 void listenUDP()
@@ -495,12 +450,12 @@ void loop()
   // upt();
   // listenUDP();
   // time(&now);
-  readCell();
+  // readCell();
   doc["temp"] = temp;
-  doc["C1"] = String(actualCell1 * calibrationFactor1, 2);
-  doc["C2"] = String(actualCell2 * calibrationFactor2, 2);
-  doc["C3"] = String(actualCell3 * calibrationFactor3, 2);
-  doc["C4"] = String(actualCell4 * calibrationFactor4, 2);
+  // doc["C1"] = String(actualCell1 * calibrationFactor1, 2);
+  // doc["C2"] = String(actualCell2 * calibrationFactor2, 2);
+  // doc["C3"] = String(actualCell3 * calibrationFactor3, 2);
+  // doc["C4"] = String(actualCell4 * calibrationFactor4, 2);
   // if (digitalRead(0) == LOW)
   // {
   //   preferences.putFloat("totalEnergy", 0);
@@ -529,6 +484,7 @@ void loop()
   doc["current"] = String(current_mA, 2);
   doc["power"] = String(power_mW, 2);
   doc["totalEnergy"] = String(totalEnergy, 2);
+  // doc["button"] = digitalRead(BTN_PIN);
   // doc["loadVoltage"] = String(loadvoltage, 3);
   doc["percent"] = String(percent, 2);
   doc["capacity"] = String(capacity_mAh, 2);
@@ -545,7 +501,19 @@ void loop()
 
   analogWrite(FAN, fan);
 
-  if ((millis() - start) > 800)
+  if (digitalRead(BTN_PIN) == LOW)
+  {
+    JsonDocument doc;
+    doc["button"] = digitalRead(BTN_PIN);
+    doc["key"] = "button";
+    automata.sendAction(doc);
+
+    led.setPixelColor(0, 250, 0, 0);
+    led.show();
+    delay(800);
+  }
+
+  if ((millis() - start) > 500)
   {
     led.setPixelColor(0, 250, 250, 250);
     led.show();

@@ -14,9 +14,6 @@
 			"path": "../../AutomataENV"
 		},
 		{
-			"path": "E:/Arduino Lib/ArduinoAutomata"
-		},
-		{
 			"name": "Fan",
 			"path": "../../Fan"
 		},
@@ -43,6 +40,13 @@
 		{
 			"name": "KnobDisplay",
 			"path": "../../KnobDisplay"
+		},
+		{
+			"name": "KnobESP32",
+			"path": "../../KnobESP32"
+		},
+		{
+			"path": "../../../../Arduino/ArduinoAutomata"
 		}
 	],
 	"settings": {
@@ -59,7 +63,19 @@
 			"initializer_list": "cpp",
 			"regex": "cpp",
 			"cjson.h": "c",
-			"freertos.h": "c"
+			"freertos.h": "c",
+			"charconv": "cpp",
+			"chrono": "cpp",
+			"optional": "cpp",
+			"format": "cpp",
+			"ratio": "cpp",
+			"system_error": "cpp",
+			"functional": "cpp",
+			"tuple": "cpp",
+			"type_traits": "cpp",
+			"utility": "cpp",
+			"variant": "cpp",
+			"img.c": "cpp"
 		}
 	}
 }

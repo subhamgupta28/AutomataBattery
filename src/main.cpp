@@ -251,10 +251,12 @@ void setup()
   JsonDocument doc;
   doc["max"] = 255;
   doc["min"] = 0;
+  doc["values"] = "0,255";
 
   automata.addAttribute("pwm", "Light", "", "ACTION|SLIDER", doc);
   automata.addAttribute("fan", "Fan", "", "ACTION|MENU|SLIDER", doc);
   // automata.addAttribute("remaining", "Remaining Time", "Date");
+
   automata.addAttribute("outPow", "Light", "", "ACTION|SWITCH");
   automata.addAttribute("toggle", "Toggle", "", "ACTION|MENU|BTN");
   automata.addAttribute("reset", "Reset", "", "ACTION|MENU|BTN");

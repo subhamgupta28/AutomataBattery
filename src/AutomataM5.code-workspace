@@ -47,6 +47,20 @@
 		},
 		{
 			"path": "../../../../Arduino/ArduinoAutomata"
+		},
+		{
+			"name": "KnobFileServer",
+			"path": "../../KnobFileServer"
+		},
+		{
+			"path": "../../SDWebServer"
+		},
+		{
+			"name": "TestingProj",
+			"path": "../../TestingProj"
+		},
+		{
+			"path": "../../../../Arduino/AutomataMqtt"
 		}
 	],
 	"settings": {

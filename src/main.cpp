@@ -507,7 +507,6 @@ void loop()
 
   led.setPixelColor(0, 0, 0, 250);
   led.show();
-  automata.loop();
   readBMP();
   readPower();
   // upt();

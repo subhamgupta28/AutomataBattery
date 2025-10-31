@@ -5,8 +5,7 @@
 #include "ArduinoJson.h"
 #include <Adafruit_NeoPixel.h>
 #include <Adafruit_BMP280.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+#include <U8g2lib.h>
 #define MQTT_MAX_PACKET_SIZE 2048
 // Define OLED display size
 #define SCREEN_WIDTH 128
@@ -19,6 +18,10 @@
 #define BTN_PIN 4
 #define RST_PIN 8
 
+// Found I2C device at 0x3C
+// Found I2C device at 0x40
+// Found I2C device at 0x41
+// Found I2C device at 0x76
 // const char* HOST = "192.168.29.53";
 // int PORT = 8080;
 
@@ -26,10 +29,11 @@ const char *HOST = "raspberry.local";
 int PORT = 8010;
 
 uint8_t i2cAddress = 0x69;
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, RST_PIN);
+U8G2_SH1106_128X64_NONAME_F_HW_I2C display(U8G2_R0, U8X8_PIN_NONE);
+
 Adafruit_BMP280 bmp;
 Preferences preferences;
-Automata automata("Battery Main", HOST, PORT);
+Automata automata("Battery 500WH", HOST, PORT);
 Adafruit_INA219 ina219_a(0x40);
 Adafruit_INA219 ina219_b(0x41);
 Adafruit_NeoPixel led(1, 48, NEO_RGB + NEO_KHZ800);
@@ -206,39 +210,40 @@ void getData()
 
 void initDisp()
 {
-  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C))
-  {
-    Serial.println(F("SSD1306 init failed"));
-    while (1)
-    {
-      Serial.println(F("SSD1306 init failed"));
-      delay(1000);
-    }
-  }
-  // display.setRotation(1);
-  display.clearDisplay();
-  display.setTextSize(2);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(10, 25);
-  display.println("Hello!");
-  display.display();
+  display.begin();
+
+  display.clearBuffer();
+  display.setFont(u8g2_font_ncenB08_tr);
+  display.drawStr(10, 32, "Hello!");
+
+  display.sendBuffer();
+  Serial.println(F("U8G2 OLED init done"));
+  display.setContrast(10);
+  delay(1000);
 }
 
 void showMsg(String text)
 {
-  display.clearDisplay();
-  display.setTextSize(2);
-  display.setTextColor(SSD1306_WHITE);
-  display.setCursor(10, 25);
-  display.println(text);
-  display.display();
+  display.clearBuffer();
+  display.setFont(u8g2_font_ncenB14_tr);
+  display.drawStr(5, 32, text.c_str());
+  display.sendBuffer();
+}
+
+void dispMsg(String text1, String text2)
+{
+  display.clearBuffer();
+  display.setFont(u8g2_font_ncenB14_tr);
+  display.drawStr(0, 20, text1.c_str());
+  display.drawStr(0, 50, text2.c_str());
+  display.sendBuffer();
 }
 void setup()
 {
   Serial.begin(115200);
   delay(200);
   led.begin();
-  led.setBrightness(5);
+  led.setBrightness(150);
   led.setPixelColor(0, 180, 250, 50);
   led.show();
   pinMode(RST_PIN, OUTPUT);
@@ -261,10 +266,6 @@ void setup()
   // automata.addAttribute("C1_VOLT", "Volt Ch 1", "V");
   // automata.addAttribute("C2_VOLT", "Volt Ch 2", "V");
 
-  automata.addAttribute("C1_CURR", "C1", "A", "DATA|AUX");
-  automata.addAttribute("C2_CURR", "C2", "A", "DATA|AUX");
-
-
   // automata.addAttribute("C1", "V1", "V", "DATA|AUX");
   // automata.addAttribute("C2", "V2", "V", "DATA|AUX");
   // automata.addAttribute("C3", "V3", "V", "DATA|AUX");
@@ -272,7 +273,7 @@ void setup()
 
   // automata.addAttribute("shuntVoltage", "Shunt Volt", "V");
   automata.addAttribute("power", "Power", "W", "DATA|MAIN");
-  automata.addAttribute("busVoltage", "Voltage", "V", "DATA|MAIN");
+  automata.addAttribute("busVoltage", "Voltage", "V", "DATA|AUX");
 
   automata.addAttribute("current", "Current", "A", "DATA|MAIN");
   automata.addAttribute("percent", "Percent", "%", "DATA|MAIN");
@@ -280,7 +281,8 @@ void setup()
   automata.addAttribute("totalEnergy", "Energy", "Wh", "DATA|MAIN");
   // automata.addAttribute("loadVoltage", "Load Volt", "V");
   automata.addAttribute("capacity", "Capacity", "Ah", "DATA|MAIN");
-    automata.addAttribute("dischargingTime", "Time Left", "Hr", "DATA|MAIN");
+  automata.addAttribute("dischargingTime", "Time Left", "Hr", "DATA|MAIN");
+  automata.addAttribute("status", "Status", "", "DATA|MAIN");
   automata.addAttribute("C1_POWER", "P1", "W", "DATA|MAIN");
   automata.addAttribute("C2_POWER", "P2", "W", "DATA|MAIN");
 
@@ -289,6 +291,8 @@ void setup()
   doc["min"] = 0;
   doc["values"] = "0,255";
   showMsg("Starting");
+  delay(1000);
+  showMsg("Registering");
   // automata.addAttribute("pwm", "Light", "", "ACTION|SLIDER", doc);
   automata.addAttribute("fan", "Fan", "", "ACTION|MENU|SLIDER", doc);
   // automata.addAttribute("remaining", "Remaining Time", "Date");
@@ -297,7 +301,8 @@ void setup()
   automata.addAttribute("toggle", "Toggle", "", "ACTION|MENU|BTN");
   automata.addAttribute("reset", "Reset", "", "ACTION|MENU|BTN");
   automata.addAttribute("button", "Button", "", "ACTION|MENU|BTN");
-
+  automata.addAttribute("C1_CURR", "C1", "A", "DATA|MAIN");
+  automata.addAttribute("C2_CURR", "C2", "A", "DATA|MAIN");
   // automata.addAttribute("upTime", "Up Time", "Hours", "DATA|MAIN");
 
   automata.registerDevice();
@@ -315,6 +320,7 @@ void setup()
   }
 
   showMsg("Welcome");
+  delay(1000);
 }
 
 String getTimeStr()
@@ -405,7 +411,7 @@ void readPower()
 
   totalEnergy += power_mW * (timeInterval / (60 * 60));
   capacity_mAh += current_mA * (timeInterval / (60 * 60));
-  isDischarge = curr < 0 ? "DISCHARGING" : "CHARGING";
+  isDischarge = curr < 0 ? "DISCHARGE" : "CHARGING";
   percent = mapf(busvoltage, 19.2, 25.2, 0.0, 100.0);
 
   if (isDischarge == "CHARGING")
@@ -459,22 +465,6 @@ void readCell()
   // Serial.print("Cell 4 Voltage: "); Serial.print(actualCell4); Serial.println(" V");
 }
 
-void dispMsg(String text1, String text2)
-{
-  display.clearDisplay();
-  display.setTextSize(2); // Smaller font fits more info
-  display.setTextColor(SSD1306_WHITE);
-
-  // Row 1
-  display.setCursor(0, 10);
-  display.println(text1);
-
-  // Row 2
-  display.setCursor(0, 34);
-  display.println(text2);
-
-  display.display();
-}
 int c = 0;
 long ds = millis();
 void dispStatus()
@@ -483,19 +473,19 @@ void dispStatus()
   switch (c)
   {
   case 1:
-    dispMsg("P1:" + String(c1_pow, 2) + " W", "P2:" + String(c2_pow, 2) + " W");
+    dispMsg("P1: " + String(c1_pow, 2) + " W", "P2: " + String(c2_pow, 2) + " W");
     break;
   case 2:
-    dispMsg("V:" + String(busvoltage, 2) + " V", "C:" + String(current_mA, 2) + " A");
+    dispMsg("V: " + String(busvoltage, 2) + " V", "C: " + String(current_mA, 2) + " A");
     break;
   case 3:
-    dispMsg("E:" + String(totalEnergy, 0) + " Wh", "C:" + String(capacity_mAh, 0) + " Ah");
+    dispMsg("E: " + String(totalEnergy, 0) + " Wh", "C: " + String(capacity_mAh, 0) + " Ah");
     break;
   case 4:
-    dispMsg("P:" + String(power_mW, 2) + " W", "P:" + String(percent, 2) + " %");
+    dispMsg("TP: " + String(power_mW, 2) + " W", "S:" + String(percent, 2) + " %");
     break;
   case 5:
-    dispMsg("F:" + String(map(fan, 0, 255, 0, 100)) + " %", "T:" + String(temp) + " C");
+    dispMsg("F: " + String(map(fan, 0, 255, 0, 100)) + " %", "T: " + String(temp) + " C");
     break;
   default:
     c = 0;
@@ -555,7 +545,7 @@ void loop()
   // doc["startTime"] = startTimeStr;
   doc["dischargingTime"] = String(dischargingTimeHours, 2);
   // time(&now);
-  // doc["upTime"] = uptime;
+  doc["status"] = isDischarge;
   if (outPow)
     analogWrite(PIN, pwm);
   else
@@ -574,7 +564,7 @@ void loop()
     led.show();
     delay(800);
   }
-  if ((millis() - ds) > 2000)
+  if ((millis() - ds) > 3000)
   {
     dispStatus();
     ds = millis();

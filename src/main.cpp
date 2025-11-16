@@ -36,7 +36,7 @@ Preferences preferences;
 Automata automata("Battery 500WH", HOST, PORT);
 Adafruit_INA219 ina219_a(0x40);
 Adafruit_INA219 ina219_b(0x41);
-Adafruit_NeoPixel led(1, 48, NEO_RGB + NEO_KHZ800);
+Adafruit_NeoPixel led(1, 48, NEO_GRB + NEO_KHZ800);
 
 JsonDocument doc;
 float temp = 0;
@@ -102,6 +102,7 @@ time_t now;
 bool outPow = true;
 bool reset = false;
 int pwm = 0;
+bool displayOnOff = true;
 int fan = 80;
 void softOff()
 {
@@ -142,6 +143,16 @@ void action(const Action action)
       softOn();
     else
       softOff();
+  }
+
+  if (action.data.containsKey("displayOnOff"))
+  {
+    displayOnOff = action.data["displayOnOff"];
+    preferences.putBool("displayOnOff", displayOnOff);
+    if (displayOnOff)
+      display.setPowerSave(0);
+    else
+      display.setPowerSave(1);
   }
 
   if (action.data.containsKey("toggle"))
@@ -206,6 +217,7 @@ void getData()
   outPow = preferences.getBool("outPow", false);
   totalEnergy = preferences.getFloat("totalEnergy", 0);
   capacity_mAh = preferences.getFloat("capacity_mAh", 0);
+  displayOnOff = preferences.getBool("displayOnOff", true);
 }
 
 void initDisp()
@@ -214,19 +226,33 @@ void initDisp()
 
   display.clearBuffer();
   display.setFont(u8g2_font_ncenB08_tr);
-  display.drawStr(10, 32, "Hello!");
+  // display.drawStr(10, 32, "Hello!");
 
-  display.sendBuffer();
+  // display.sendBuffer();
   Serial.println(F("U8G2 OLED init done"));
-  display.setContrast(10);
+  // display.setContrast(100);
+
   delay(1000);
 }
 
 void showMsg(String text)
 {
   display.clearBuffer();
-  display.setFont(u8g2_font_ncenB14_tr);
-  display.drawStr(5, 32, text.c_str());
+  display.setFont(u8g2_font_ncenB18_tr);
+
+  // Get display width and height
+  int displayWidth = display.getDisplayWidth();
+  int displayHeight = display.getDisplayHeight();
+
+  // Calculate text width and height
+  int textWidth = display.getStrWidth(text.c_str());
+  int textHeight = 18; // approx. font height (you can tweak if needed)
+
+  // Center positions
+  int x = (displayWidth - textWidth) / 2;
+  int y = (displayHeight + textHeight) / 2;
+
+  display.drawStr(x, y, text.c_str());
   display.sendBuffer();
 }
 
@@ -234,8 +260,25 @@ void dispMsg(String text1, String text2)
 {
   display.clearBuffer();
   display.setFont(u8g2_font_ncenB14_tr);
-  display.drawStr(0, 20, text1.c_str());
-  display.drawStr(0, 50, text2.c_str());
+
+  int displayWidth = display.getDisplayWidth();
+  int displayHeight = display.getDisplayHeight();
+
+  int lineHeight = 16; // depends on font, can be adjusted
+  int text1Width = display.getStrWidth(text1.c_str());
+  int text2Width = display.getStrWidth(text2.c_str());
+
+  // Centered horizontally
+  int x1 = (displayWidth - text1Width) / 2;
+  int x2 = (displayWidth - text2Width) / 2;
+
+  // Vertically spaced: one line above center, one below
+  int yCenter = displayHeight / 2;
+  int y1 = yCenter - lineHeight / 2;
+  int y2 = yCenter + lineHeight;
+
+  display.drawStr(x1, y1, text1.c_str());
+  display.drawStr(x2, y2, text2.c_str());
   display.sendBuffer();
 }
 void setup()
@@ -278,21 +321,22 @@ void setup()
   automata.addAttribute("current", "Current", "A", "DATA|MAIN");
   automata.addAttribute("percent", "Percent", "%", "DATA|MAIN");
   automata.addAttribute("temp", "Temp", "°C", "DATA|MAIN");
+  automata.addAttribute("pressure", "Pressure", "mmHg", "DATA|AUX");
   automata.addAttribute("totalEnergy", "Energy", "Wh", "DATA|MAIN");
   // automata.addAttribute("loadVoltage", "Load Volt", "V");
   automata.addAttribute("capacity", "Capacity", "Ah", "DATA|MAIN");
-  automata.addAttribute("dischargingTime", "Time Left", "Hr", "DATA|MAIN");
+  automata.addAttribute("dischargingTime", "Runtime", "Hr", "DATA|MAIN");
   automata.addAttribute("status", "Status", "", "DATA|MAIN");
   automata.addAttribute("C1_POWER", "P1", "W", "DATA|MAIN");
   automata.addAttribute("C2_POWER", "P2", "W", "DATA|MAIN");
-
+  automata.addAttribute("displayOnOff", "Display Power", "W", "ACTION|MENU|SWITCH");
   JsonDocument doc;
   doc["max"] = 255;
   doc["min"] = 0;
   doc["values"] = "0,255";
-  showMsg("Starting");
+  showMsg("Welcome");
   delay(1000);
-  showMsg("Registering");
+  
   // automata.addAttribute("pwm", "Light", "", "ACTION|SLIDER", doc);
   automata.addAttribute("fan", "Fan", "", "ACTION|MENU|SLIDER", doc);
   // automata.addAttribute("remaining", "Remaining Time", "Date");
@@ -303,6 +347,10 @@ void setup()
   automata.addAttribute("button", "Button", "", "ACTION|MENU|BTN");
   automata.addAttribute("C1_CURR", "C1", "A", "DATA|MAIN");
   automata.addAttribute("C2_CURR", "C2", "A", "DATA|MAIN");
+  automata.addAttribute("capacityInfo", "Capacity", "20 AH", "DATA|INFO");
+  automata.addAttribute("configInfo", "Config", "6s4p", "DATA|INFO");
+  automata.addAttribute("energyInfo", "Energy", "504 WH", "DATA|INFO");
+  automata.addAttribute("sensorInfo", "Sensors", "Current, Volt, Temp, Pressure", "DATA|INFO");
   // automata.addAttribute("upTime", "Up Time", "Hours", "DATA|MAIN");
 
   automata.registerDevice();
@@ -319,8 +367,13 @@ void setup()
     Serial.print(".");
   }
 
-  showMsg("Welcome");
+  showMsg("Starting");
   delay(1000);
+
+  if (displayOnOff)
+    display.setPowerSave(0);
+  else
+    display.setPowerSave(1);
 }
 
 String getTimeStr()
@@ -368,6 +421,11 @@ void readBMP()
   {
     temp = bmp.readTemperature();
     pressure = bmp.readPressure();
+    // Convert pressure from Pa → hPa (millibar)
+    float pressure_hPa = pressure / 100.0;
+
+    // Optional: convert to mmHg if you prefer
+    pressure = pressure_hPa * 0.75006;
   }
   else
   {
@@ -412,7 +470,7 @@ void readPower()
   totalEnergy += power_mW * (timeInterval / (60 * 60));
   capacity_mAh += current_mA * (timeInterval / (60 * 60));
   isDischarge = curr < 0 ? "DISCHARGE" : "CHARGING";
-  percent = mapf(busvoltage, 19.2, 25.2, 0.0, 100.0);
+  percent = mapf(busvoltage, 18, 25.2, 0.0, 100.0);
 
   if (isDischarge == "CHARGING")
   {
@@ -465,38 +523,79 @@ void readCell()
   // Serial.print("Cell 4 Voltage: "); Serial.print(actualCell4); Serial.println(" V");
 }
 
-int c = 0;
+int c = 1;
 long ds = millis();
+
 void dispStatus()
 {
-  c++;
+  // c++;
   switch (c)
   {
-  case 1:
-    dispMsg("P1: " + String(c1_pow, 2) + " W", "P2: " + String(c2_pow, 2) + " W");
+    case 1:
+    showMsg(String(percent, 2) + " %");
+    // dispMsg("P: " + String(power_mW, 2) + " W", "B:" + String(percent, 2) + " %");
     break;
-  case 2:
-    dispMsg("V: " + String(busvoltage, 2) + " V", "C: " + String(current_mA, 2) + " A");
-    break;
-  case 3:
-    dispMsg("E: " + String(totalEnergy, 0) + " Wh", "C: " + String(capacity_mAh, 0) + " Ah");
-    break;
-  case 4:
-    dispMsg("TP: " + String(power_mW, 2) + " W", "S:" + String(percent, 2) + " %");
-    break;
-  case 5:
-    dispMsg("F: " + String(map(fan, 0, 255, 0, 100)) + " %", "T: " + String(temp) + " C");
-    break;
+  // case 1:
+  //   dispMsg("P1: " + String(c1_pow, 2) + " W", "P2: " + String(c2_pow, 2) + " W");
+  //   break;
+  // case 2:
+  //   dispMsg("V: " + String(busvoltage, 2) + " V", "C: " + String(current_mA, 2) + " A");
+  //   break;
+  // case 3:
+  //   dispMsg("E: " + String(totalEnergy, 0) + " Wh", "C: " + String(capacity_mAh, 0) + " Ah");
+  //   break;
+  // case 4:
+  //   dispMsg("TP: " + String(power_mW, 2) + " W", "S:" + String(percent, 2) + " %");
+  //   break;
+  // case 5:
+  //   dispMsg("F: " + String(map(fan, 0, 255, 0, 100)) + " %", "T: " + String(temp) + " C");
+  //   break;
+
   default:
     c = 0;
     break;
   }
 }
+void showEmoji(String emoji)
+{
+  display.clearBuffer();
+
+  // Use a font that includes Unicode symbols or emoji-like icons
+  // Try one of these:
+  // u8g2_font_unifont_t_symbols
+  // u8g2_font_open_iconic_all_4x_t
+  // u8g2_font_unifont_t_emoji
+
+  display.setFont(u8g2_font_unifont_t_symbols); // Try this first
+
+  int displayWidth = display.getDisplayWidth();
+  int displayHeight = display.getDisplayHeight();
+
+  int textWidth = display.getStrWidth(emoji.c_str());
+  int textHeight = 16; // approximate height for this font
+
+  int x = (displayWidth - textWidth) / 2;
+  int y = (displayHeight + textHeight) / 2;
+
+  display.drawStr(x, y, emoji.c_str());
+  display.sendBuffer();
+}
 void loop()
 {
+  if (displayOnOff)
+  {
+    if (percent > 30)
+    {
+      led.setPixelColor(0, 0, 250, 0);
+    }
+    else
+    {
+      led.setPixelColor(0, 250, 0, 0);
+    }
 
-  led.setPixelColor(0, 0, 0, 250);
-  led.show();
+    led.show();
+  }
+
   readBMP();
   readPower();
   // upt();
@@ -504,6 +603,7 @@ void loop()
   // time(&now);
   // readCell();
   doc["temp"] = temp;
+  doc["pressure"] = pressure;
   // doc["C1"] = String(actualCell1 * calibrationFactor1, 2);
   // doc["C2"] = String(actualCell2 * calibrationFactor2, 2);
   // doc["C3"] = String(actualCell3 * calibrationFactor3, 2);
@@ -540,6 +640,7 @@ void loop()
   // doc["loadVoltage"] = String(loadvoltage, 3);
   doc["percent"] = String(percent, 2);
   doc["capacity"] = String(capacity_mAh, 2);
+  doc["displayOnOff"] = displayOnOff;
   // doc["dateTime"] = getTimeStr();
   // doc["status"] = isDischarge;
   // doc["startTime"] = startTimeStr;
@@ -560,20 +661,29 @@ void loop()
     doc["key"] = "button";
     automata.sendAction(doc);
 
-    led.setPixelColor(0, 250, 0, 0);
-    led.show();
+    if (displayOnOff)
+    {
+      led.setPixelColor(0, 250, 0, 0);
+      led.show();
+    }
+
     delay(800);
   }
-  if ((millis() - ds) > 3000)
-  {
+
+  // if ((millis() - ds) > 1000)
+  // {
     dispStatus();
-    ds = millis();
-  }
+    // showEmoji("😀");
+  //   ds = millis();
+  // }
 
   if ((millis() - start) > 1000)
   {
-    led.setPixelColor(0, 250, 250, 250);
-    led.show();
+    if (displayOnOff)
+    {
+      led.setPixelColor(0, 150, 250, 0);
+      led.show();
+    }
 
     automata.sendLive(doc);
     start = millis();
@@ -585,6 +695,10 @@ void loop()
   }
 
   delay(100);
-  led.setPixelColor(0, 0, 0, 0);
-  led.show();
+
+  if (!displayOnOff)
+  {
+    led.setPixelColor(0, 0, 0, 0);
+    led.show();
+  }
 }

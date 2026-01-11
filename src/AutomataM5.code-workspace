@@ -64,6 +64,10 @@
 		},
 		{
 			"path": "../../RGB_Keayboard"
+		},
+		{
+			"name": "Matrix",
+			"path": "../../Matrix"
 		}
 	],
 	"settings": {

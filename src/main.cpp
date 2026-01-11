@@ -10,7 +10,7 @@
 // Define OLED display size
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
-
+#define RELAY_PIN 13
 #define I2C_SDA_PIN 39
 #define I2C_SCL_PIN 41
 #define PIN 45
@@ -33,7 +33,7 @@ U8G2_SH1106_128X64_NONAME_F_HW_I2C display(U8G2_R0, U8X8_PIN_NONE);
 
 Adafruit_BMP280 bmp;
 Preferences preferences;
-Automata automata("Battery 500WH", HOST, PORT);
+Automata automata("Battery 500WH", "SENSOR|BATTERY", HOST, PORT, HOST, 1883);
 Adafruit_INA219 ina219_a(0x40);
 Adafruit_INA219 ina219_b(0x41);
 Adafruit_NeoPixel led(1, 48, NEO_GRB + NEO_KHZ800);
@@ -41,32 +41,6 @@ Adafruit_NeoPixel led(1, 48, NEO_GRB + NEO_KHZ800);
 JsonDocument doc;
 float temp = 0;
 float pressure = 0;
-
-// Pin definitions for ADC inputs
-const int adcPin1 = 4;
-const int adcPin2 = 6;
-const int adcPin3 = 8;
-const int adcPin4 = 10;
-
-// Reference voltage for ESP32 ADC (default is 3.3V)
-const float referenceVoltage = 3.3;
-
-// Adjusted Voltage divider ratios for Li-ion 4S (Based on resistor values)
-const float dividerRatio1 = 2.0;  // 10kΩ / 10kΩ
-const float dividerRatio2 = 11.0; // 100kΩ / 10kΩ
-const float dividerRatio3 = 20.6; // 100kΩ / 5.1kΩ
-const float dividerRatio4 = 51.0; // 100kΩ / 2kΩ
-
-// Calibration factors (adjust these based on multimeter readings)
-float calibrationFactor1 = 1.040;
-float calibrationFactor2 = 1.1573;
-float calibrationFactor3 = 1.0986;
-float calibrationFactor4 = 1.3079;
-
-float actualCell1;
-float actualCell2;
-float actualCell3;
-float actualCell4;
 
 float c1_shunt = 0;
 float c2_shunt = 0;
@@ -96,6 +70,7 @@ float chargingTimeHours = 0;
 float dischargingTimeHours = 0;
 float targetCapacity = 20;
 long startTime = 0;
+bool relay = false;
 String startTimeStr = "";
 String isDischarge = "DISCHARGE";
 time_t now;
@@ -133,6 +108,11 @@ void action(const Action action)
   {
     fan = action.data["fan"];
     preferences.putInt("fan", fan);
+  }
+
+  if (action.data.containsKey("relay"))
+  {
+    relay = action.data["relay"];
   }
 
   if (action.data.containsKey("outPow"))
@@ -293,6 +273,7 @@ void setup()
   pinMode(PIN, OUTPUT);
   pinMode(FAN, OUTPUT);
   pinMode(BTN_PIN, INPUT_PULLUP);
+  pinMode(RELAY_PIN, OUTPUT);
   analogWrite(PIN, 20);
   analogWrite(FAN, fan);
 
@@ -330,13 +311,14 @@ void setup()
   automata.addAttribute("C1_POWER", "P1", "W", "DATA|MAIN");
   automata.addAttribute("C2_POWER", "P2", "W", "DATA|MAIN");
   automata.addAttribute("displayOnOff", "Display Power", "W", "ACTION|MENU|SWITCH");
+  automata.addAttribute("relay", "Relay", "On/Off", "ACTION|MENU|BTN");
   JsonDocument doc;
   doc["max"] = 255;
   doc["min"] = 0;
   doc["values"] = "0,255";
   showMsg("Welcome");
   delay(1000);
-  
+
   // automata.addAttribute("pwm", "Light", "", "ACTION|SLIDER", doc);
   automata.addAttribute("fan", "Fan", "", "ACTION|MENU|SLIDER", doc);
   // automata.addAttribute("remaining", "Remaining Time", "Date");
@@ -496,33 +478,6 @@ void readPower()
   previousMillis = currentMillis;
 }
 
-float readVoltage(int pin, float ratio)
-{
-  int rawADC = analogRead(pin);
-  float voltage = (rawADC / 4095.0) * referenceVoltage;
-  return voltage * ratio;
-}
-
-void readCell()
-{
-  float cell1Voltage = readVoltage(adcPin1, dividerRatio1);
-  float cell2Voltage = readVoltage(adcPin2, dividerRatio2);
-  float cell3Voltage = readVoltage(adcPin3, dividerRatio3);
-  float cell4Voltage = readVoltage(adcPin4, dividerRatio4);
-
-  // Calculate actual cell voltages
-  actualCell1 = cell1Voltage;
-  actualCell2 = cell2Voltage - cell1Voltage;
-  actualCell3 = cell3Voltage - cell2Voltage;
-  actualCell4 = cell4Voltage - cell3Voltage;
-
-  // Print the voltages to Serial Monitor
-  // Serial.print("Cell 1 Voltage: "); Serial.print(actualCell1); Serial.println(" V");
-  // Serial.print("Cell 2 Voltage: "); Serial.print(actualCell2); Serial.println(" V");
-  // Serial.print("Cell 3 Voltage: "); Serial.print(actualCell3); Serial.println(" V");
-  // Serial.print("Cell 4 Voltage: "); Serial.print(actualCell4); Serial.println(" V");
-}
-
 int c = 1;
 long ds = millis();
 
@@ -531,25 +486,25 @@ void dispStatus()
   // c++;
   switch (c)
   {
-    case 1:
+  case 1:
     showMsg(String(percent, 2) + " %");
     // dispMsg("P: " + String(power_mW, 2) + " W", "B:" + String(percent, 2) + " %");
     break;
-  // case 1:
-  //   dispMsg("P1: " + String(c1_pow, 2) + " W", "P2: " + String(c2_pow, 2) + " W");
-  //   break;
-  // case 2:
-  //   dispMsg("V: " + String(busvoltage, 2) + " V", "C: " + String(current_mA, 2) + " A");
-  //   break;
-  // case 3:
-  //   dispMsg("E: " + String(totalEnergy, 0) + " Wh", "C: " + String(capacity_mAh, 0) + " Ah");
-  //   break;
-  // case 4:
-  //   dispMsg("TP: " + String(power_mW, 2) + " W", "S:" + String(percent, 2) + " %");
-  //   break;
-  // case 5:
-  //   dispMsg("F: " + String(map(fan, 0, 255, 0, 100)) + " %", "T: " + String(temp) + " C");
-  //   break;
+    // case 1:
+    //   dispMsg("P1: " + String(c1_pow, 2) + " W", "P2: " + String(c2_pow, 2) + " W");
+    //   break;
+    // case 2:
+    //   dispMsg("V: " + String(busvoltage, 2) + " V", "C: " + String(current_mA, 2) + " A");
+    //   break;
+    // case 3:
+    //   dispMsg("E: " + String(totalEnergy, 0) + " Wh", "C: " + String(capacity_mAh, 0) + " Ah");
+    //   break;
+    // case 4:
+    //   dispMsg("TP: " + String(power_mW, 2) + " W", "S:" + String(percent, 2) + " %");
+    //   break;
+    // case 5:
+    //   dispMsg("F: " + String(map(fan, 0, 255, 0, 100)) + " %", "T: " + String(temp) + " C");
+    //   break;
 
   default:
     c = 0;
@@ -619,6 +574,15 @@ void loop()
   //   delay(1000);
   // }
 
+  // if (relay)
+  // {
+  //   digitalWrite(RELAY_PIN, LOW);
+  //   delay(10000);
+  //   digitalWrite(RELAY_PIN, HIGH);
+  //   delay(1000);
+  //   relay = false;
+  // }
+
   // doc["C1_SHUNT"] = String(c1_shunt, 2);
   // doc["C2_SHUNT"] = String(c2_shunt, 2);
   // doc["C1_VOLT"] = String(c1_volt, 2);
@@ -672,12 +636,12 @@ void loop()
 
   // if ((millis() - ds) > 1000)
   // {
-    dispStatus();
-    // showEmoji("😀");
+  dispStatus();
+  // showEmoji("😀");
   //   ds = millis();
   // }
 
-  if ((millis() - start) > 1000)
+  if ((millis() - start) > 2000)
   {
     if (displayOnOff)
     {

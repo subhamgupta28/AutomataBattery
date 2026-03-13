@@ -68,6 +68,17 @@
 		{
 			"name": "Matrix",
 			"path": "../../Matrix"
+		},
+		{
+			"name": "RelaySwitch",
+			"path": "../../RelaySwitch"
+		},
+		{
+			"path": "../../AutomataAddons"
+		},
+		{
+			"name": "MatrixS3",
+			"path": "../../MatrixS3"
 		}
 	],
 	"settings": {

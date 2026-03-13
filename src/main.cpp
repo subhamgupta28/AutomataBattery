@@ -79,6 +79,7 @@ bool reset = false;
 int pwm = 0;
 bool displayOnOff = true;
 int fan = 80;
+int fan2 = 120;
 void softOff()
 {
   for (int i = pwm; i >= 0; i -= 2)
@@ -108,6 +109,11 @@ void action(const Action action)
   {
     fan = action.data["fan"];
     preferences.putInt("fan", fan);
+  }
+  if (action.data.containsKey("fan2"))
+  {
+    fan2 = action.data["fan2"];
+    preferences.putInt("fan2", fan2);
   }
 
   if (action.data.containsKey("relay"))
@@ -194,6 +200,7 @@ void getData()
 {
   pwm = preferences.getInt("pwm", 0);
   fan = preferences.getInt("fan", 0);
+  fan2 = preferences.getInt("fan2", 0);
   outPow = preferences.getBool("outPow", false);
   totalEnergy = preferences.getFloat("totalEnergy", 0);
   capacity_mAh = preferences.getFloat("capacity_mAh", 0);
@@ -276,6 +283,7 @@ void setup()
   pinMode(RELAY_PIN, OUTPUT);
   analogWrite(PIN, 20);
   analogWrite(FAN, fan);
+  analogWrite(RELAY_PIN, fan2);
 
   Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
 
@@ -307,6 +315,7 @@ void setup()
   // automata.addAttribute("loadVoltage", "Load Volt", "V");
   automata.addAttribute("capacity", "Capacity", "Ah", "DATA|MAIN");
   automata.addAttribute("dischargingTime", "Runtime", "Hr", "DATA|MAIN");
+  automata.addAttribute("chargingTime", "Charge ETA", "Hr", "DATA|MAIN");
   automata.addAttribute("status", "Status", "", "DATA|MAIN");
   automata.addAttribute("C1_POWER", "P1", "W", "DATA|MAIN");
   automata.addAttribute("C2_POWER", "P2", "W", "DATA|MAIN");
@@ -321,6 +330,7 @@ void setup()
 
   // automata.addAttribute("pwm", "Light", "", "ACTION|SLIDER", doc);
   automata.addAttribute("fan", "Fan", "", "ACTION|MENU|SLIDER", doc);
+  automata.addAttribute("fan2", "Fan 2", "", "ACTION|MENU|SLIDER", doc);
   // automata.addAttribute("remaining", "Remaining Time", "Date");
 
   // automata.addAttribute("outPow", "Light", "", "ACTION|SWITCH");
@@ -454,9 +464,14 @@ void readPower()
   isDischarge = curr < 0 ? "DISCHARGE" : "CHARGING";
   percent = mapf(busvoltage, 18, 25.2, 0.0, 100.0);
 
-  if (isDischarge == "CHARGING")
+  if (isDischarge == "CHARGING" && current_mA > 0)
   {
-    chargingTimeHours = (targetCapacity - capacity_mAh) / (power_mW / loadvoltage);
+    float remainingCapacity = targetCapacity - capacity_mAh;
+
+    if (remainingCapacity > 0)
+      chargingTimeHours = remainingCapacity / current_mA;
+    else
+      chargingTimeHours = 0;
   }
   else
   {
@@ -483,12 +498,17 @@ long ds = millis();
 
 void dispStatus()
 {
-  // c++;
+
+  c++;
   switch (c)
   {
   case 1:
     showMsg(String(percent, 2) + " %");
     // dispMsg("P: " + String(power_mW, 2) + " W", "B:" + String(percent, 2) + " %");
+    break;
+  case 2:
+    if (isDischarge == "CHARGING")
+      dispMsg("CHARGING", String(power_mW, 2) + " W");
     break;
     // case 1:
     //   dispMsg("P1: " + String(c1_pow, 2) + " W", "P2: " + String(c2_pow, 2) + " W");
@@ -583,12 +603,23 @@ void loop()
   //   relay = false;
   // }
 
+  int etaHours = (int)chargingTimeHours;
+  int etaMinutes = (int)((chargingTimeHours - etaHours) * 60);
+  if (chargingTimeHours < 0 || chargingTimeHours > 1000)
+  {
+    etaHours = 0;
+    etaMinutes = 0;
+  }
+  char etaStr[6];
+  snprintf(etaStr, sizeof(etaStr), "%02d:%02d", etaHours, etaMinutes);
+
   // doc["C1_SHUNT"] = String(c1_shunt, 2);
   // doc["C2_SHUNT"] = String(c2_shunt, 2);
   // doc["C1_VOLT"] = String(c1_volt, 2);
   // doc["C2_VOLT"] = String(c2_volt, 2);
   doc["pwm"] = pwm;
   doc["fan"] = fan;
+    doc["fan2"] = fan2;
   doc["outPow"] = outPow;
   doc["reset"] = reset;
   doc["C1_CURR"] = String(c1_curr, 2);
@@ -608,6 +639,7 @@ void loop()
   // doc["dateTime"] = getTimeStr();
   // doc["status"] = isDischarge;
   // doc["startTime"] = startTimeStr;
+  doc["chargingTime"] = String(etaStr);
   doc["dischargingTime"] = String(dischargingTimeHours, 2);
   // time(&now);
   doc["status"] = isDischarge;
@@ -617,6 +649,7 @@ void loop()
     analogWrite(PIN, 0);
 
   analogWrite(FAN, fan);
+  analogWrite(RELAY_PIN, fan2);
 
   if (digitalRead(BTN_PIN) == LOW)
   {
@@ -634,12 +667,12 @@ void loop()
     delay(800);
   }
 
-  // if ((millis() - ds) > 1000)
-  // {
-  dispStatus();
-  // showEmoji("😀");
-  //   ds = millis();
-  // }
+  if ((millis() - ds) > 1000)
+  {
+    dispStatus();
+    // showEmoji("😀");
+    ds = millis();
+  }
 
   if ((millis() - start) > 2000)
   {

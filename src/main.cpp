@@ -293,6 +293,7 @@ void setup()
   getData();
   initDisp();
   automata.begin();
+  automata.useMQTT();
   // automata.addAttribute("C1_SHUNT", "Shunt Volt Ch 1", "V");
   // automata.addAttribute("C2_SHUNT", "Shunt Volt Ch 2", "V");
   // automata.addAttribute("C1_VOLT", "Volt Ch 1", "V");

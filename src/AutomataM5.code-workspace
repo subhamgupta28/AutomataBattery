@@ -79,6 +79,10 @@
 		{
 			"name": "MatrixS3",
 			"path": "../../MatrixS3"
+		},
+		{
+			"name": "TestMq",
+			"path": "../../TestMq"
 		}
 	],
 	"settings": {

@@ -33,7 +33,7 @@ U8G2_SH1106_128X64_NONAME_F_HW_I2C display(U8G2_R0, U8X8_PIN_NONE);
 
 Adafruit_BMP280 bmp;
 Preferences preferences;
-Automata automata("Battery 500WH", "SENSOR|BATTERY", HOST, PORT, HOST, 1883);
+Automata automata("Battery 500WH", "SENSOR|BATTERY", HOST, PORT, HOST, 1884);
 Adafruit_INA219 ina219_a(0x40);
 Adafruit_INA219 ina219_b(0x41);
 Adafruit_NeoPixel led(1, 48, NEO_GRB + NEO_KHZ800);

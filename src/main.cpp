@@ -25,7 +25,7 @@
 // const char* HOST = "192.168.29.53";
 // int PORT = 8080;
 
-const char *HOST = "raspberry.local";
+const char *HOST = "192.168.1.54";
 int PORT = 8010;
 
 uint8_t i2cAddress = 0x69;

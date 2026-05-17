@@ -83,6 +83,10 @@
 		{
 			"name": "TestMq",
 			"path": "../../TestMq"
+		},
+		{
+			"name": "MiniC3",
+			"path": "../../MiniC3"
 		}
 	],
 	"settings": {

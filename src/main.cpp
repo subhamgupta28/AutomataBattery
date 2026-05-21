@@ -6,6 +6,7 @@
 #include <Adafruit_NeoPixel.h>
 #include <Adafruit_BMP280.h>
 #include <U8g2lib.h>
+#include <esp_task_wdt.h>
 #define MQTT_MAX_PACKET_SIZE 2048
 // Define OLED display size
 #define SCREEN_WIDTH 128
@@ -558,6 +559,7 @@ void showEmoji(String emoji)
 }
 void loop()
 {
+  esp_task_wdt_reset();
   if (displayOnOff)
   {
     if (percent > 30)
@@ -620,7 +622,7 @@ void loop()
   // doc["C2_VOLT"] = String(c2_volt, 2);
   doc["pwm"] = pwm;
   doc["fan"] = fan;
-    doc["fan2"] = fan2;
+  doc["fan2"] = fan2;
   doc["outPow"] = outPow;
   doc["reset"] = reset;
   doc["C1_CURR"] = String(c1_curr, 2);
@@ -652,20 +654,14 @@ void loop()
   analogWrite(FAN, fan);
   analogWrite(RELAY_PIN, fan2);
 
-  if (digitalRead(BTN_PIN) == LOW)
+  static unsigned long btnPress = 0;
+  if (digitalRead(BTN_PIN) == LOW && (millis() - btnPress) > 800)
   {
-    JsonDocument doc;
-    doc["button"] = digitalRead(BTN_PIN);
-    doc["key"] = "button";
-    automata.sendAction(doc);
-
-    if (displayOnOff)
-    {
-      led.setPixelColor(0, 250, 0, 0);
-      led.show();
-    }
-
-    delay(800);
+    btnPress = millis();
+    JsonDocument d;
+    d["button"] = 1;
+    d["key"] = "button";
+    automata.sendAction(d);
   }
 
   if ((millis() - ds) > 1000)
@@ -683,7 +679,9 @@ void loop()
       led.show();
     }
 
-    automata.sendLive(doc);
+    if (automata.isConnected()) {  // add this check
+        automata.sendLive(doc);
+    }
     start = millis();
   }
   if ((millis() - st) > d)
@@ -691,8 +689,6 @@ void loop()
     saveData();
     st = millis();
   }
-
-  delay(100);
 
   if (!displayOnOff)
   {

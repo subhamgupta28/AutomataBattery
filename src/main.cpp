@@ -657,6 +657,7 @@ void loop()
   static unsigned long btnPress = 0;
   if (digitalRead(BTN_PIN) == LOW && (millis() - btnPress) > 800)
   {
+    ESP.restart();
     btnPress = millis();
     JsonDocument d;
     d["button"] = 1;
